@@ -1,0 +1,6 @@
+user_id,downloads_mb,uploads_mb,login_hour,access_frequency
+U01,5,1,10,5
+U02,6,2,11,6
+U03,4,1,9,4
+U04,50,10,2,40
+U05,60,15,1,50

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel | Data Leakage Detection</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --card-bg: #161b22;
+            --accent-blue: #00d2ff;
+            --accent-green: #39ff14;
+            --accent-red: #ff3131;
+            --text-main: #e6edf3;
+            --border-color: #30363d;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 900px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        /* Header Area */
+        .header {
+            background: rgba(0, 210, 255, 0.1);
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .header h2 {
+            margin: 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-size: 1.5rem;
+            color: var(--accent-blue);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+
+        /* Input Styling */
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            color: #8b949e;
+            text-transform: uppercase;
+        }
+
+        input, select {
+            width: 100%;
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            color: white;
+            box-sizing: border-box;
+            transition: border 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        /* Scan Button */
+        .scan-btn {
+            grid-column: span 2;
+            background: linear-gradient(45deg, #0072ff, #00d2ff);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .scan-btn:hover {
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Result Panel */
+        #result {
+            grid-column: span 2;
+            min-height: 80px;
+            border-radius: 8px;
+            display: none; /* Hidden by default */
+            padding: 20px;
+            text-align: center;
+            border-left: 5px solid transparent;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Risk States */
+        .low { border-color: var(--accent-green) !important; color: var(--accent-green); }
+        .medium { border-color: #fb8c00 !important; color: #fb8c00; }
+        .high { border-color: var(--accent-red) !important; color: var(--accent-red); animation: pulse 1.5s infinite; }
+        .error { border-color: crimson !important; color: crimson; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 49, 49, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 49, 49, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 49, 49, 0); }
+        }
+
+        .loader {
+            display: none;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            .container { grid-template-columns: 1fr; }
+            .scan-btn { grid-column: span 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div class="header">
+        <h2><i class="fas fa-shield-halved"></i> Breach Detection</h2>
+    </div>
+
+    <div class="container">
+        <div class="input-section">
+            <div class="input-group">
+                <label><i class="fas fa-file-arrow-up"></i> Source File</label>
+                <input type="file" id="file">
+            </div>
+            <div class="input-group">
+                <label><i class="fas fa-fingerprint"></i> File Format</label>
+                <select id="file_type_encoded">
+                    <option value="0">CSV (Standard)</option>
+                    <option value="1">Excel (Office)</option>
+                    <option value="2">PDF (Document)</option>
+                    <option value="3">Plain Text</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-group">
+                <label><i class="fas fa-bolt"></i> Transfer Vol. (MB)</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="number" id="downloads_mb" placeholder="DL">
+                    <input type="number" id="uploads_mb" placeholder="UL">
+                </div>
+            </div>
+            <div class="input-group">
+                <label><i class="fas fa-clock"></i> Login Hour & Freq</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="number" id="login_hour" placeholder="0-23">
+                    <input type="number" id="access_frequency" placeholder="Freq">
+                </div>
+            </div>
+        </div>
+
+        <button class="scan-btn" onclick="checkRisk()">
+            <span id="btn-text">Initialize Deep Scan</span>
+            <div class="loader" id="loader"></div>
+        </button>
+
+        <div id="result"></div>
+    </div>
+</div>
+
+<script>
+function checkRisk() {
+    const fileInput = document.getElementById("file").files[0];
+    const resultBox = document.getElementById("result");
+    const loader = document.getElementById("loader");
+    const btnText = document.getElementById("btn-text");
+
+    if (!fileInput) {
+        showResult("❌ ERROR: No input file detected for analysis.", "error");
+        return;
+    }
+
+    // UI Feedback
+    loader.style.display = "inline-block";
+    btnText.innerText = "Analyzing Packets...";
+    resultBox.style.display = "none";
+
+    const formData = new FormData();
+    formData.append("file", fileInput);
+    formData.append("file_type_encoded", document.getElementById("file_type_encoded").value);
+    formData.append("downloads_mb", document.getElementById("downloads_mb").value);
+    formData.append("uploads_mb", document.getElementById("uploads_mb").value);
+    formData.append("login_hour", document.getElementById("login_hour").value);
+    formData.append("access_frequency", document.getElementById("access_frequency").value);
+
+    fetch("/predict", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+        loader.style.display = "none";
+        btnText.innerText = "Initialize Deep Scan";
+        
+        if (result.error) {
+            showResult("❌ SYSTEM ERROR: " + result.error, "error");
+            return;
+        }
+
+        let cssClass = "low";
+        let icon = "✅";
+        if (result.decision === "HIGH RISK") {
+            cssClass = "high";
+            icon = "🚨";
+        } else if (result.decision === "MEDIUM RISK") {
+            cssClass = "medium";
+            icon = "⚠️";
+        }
+
+        const content = `
+            <div style="font-size: 1.2rem; margin-bottom: 8px;">${icon} THREAT LEVEL: ${result.decision}</div>
+            <div style="font-family: monospace; font-size: 0.9rem;">
+                RISK_SCORE: ${result.risk_score} | SENSITIVITY: ${result.data_sensitivity}
+            </div>
+        `;
+        showResult(content, cssClass);
+    })
+    .catch(() => {
+        loader.style.display = "none";
+        btnText.innerText = "Initialize Deep Scan";
+        showResult("❌ CRITICAL: Connection to Security Engine Lost", "error");
+    });
+}
+
+function showResult(html, className) {
+    const resultBox = document.getElementById("result");
+    resultBox.innerHTML = html;
+    resultBox.className = className;
+    resultBox.style.display = "block";
+}
+</script>
+
+</body>
+</html>

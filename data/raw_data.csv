@@ -1,0 +1,7 @@
+file_name,file_type,content_length,contains_email,contains_pan,contains_aadhaar,label
+report.pdf,PDF,1200,0,0,0,Public
+salary.xlsx,Excel,5000,1,1,0,Confidential
+users.csv,CSV,3000,1,0,0,Internal
+bank_data.csv,CSV,8000,1,1,1,Highly_Sensitive
+notes.txt,Text,400,0,0,0,Public
+employee_db.xlsx,Excel,9000,1,1,1,Highly_Sensitive
